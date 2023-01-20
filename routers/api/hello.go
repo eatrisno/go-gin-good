@@ -18,13 +18,12 @@ import (
 //	@Tags			example
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{string}	Ping
-//	@Router			/ping [get]
-func Ping(c *gin.Context) {
+//	@Success		200	{string}	Helloworld
+//	@Router			/hello [get]
+func Helloworld(c *gin.Context) {
 	appG := app.Gin{C: c}
 
 	appG.Response(http.StatusOK, e.SUCCESS, gin.H{
-		"message": "pong",
+		"message": "helloworld!",
 	})
-
 }
