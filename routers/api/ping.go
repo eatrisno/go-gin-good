@@ -8,19 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//	@BasePath	/
-
-// PingExample godoc
-//
-//	@Summary	ping example
-//	@Schemes
-//	@Description	do ping
-//	@Tags			example
-//	@Accept			json
-//	@Produce		json
-//	@Success		200	{string}	Ping
-//	@Router			/ping [get]
+// @Summary	Get a ping response
+// @Produce	json
+// @Success	200	{object}	app.Response
+// @Failure	500	{object}	app.Response
+// @Router		/ping [get]
 func Ping(c *gin.Context) {
+
 	appG := app.Gin{C: c}
 
 	appG.Response(http.StatusOK, e.SUCCESS, gin.H{
