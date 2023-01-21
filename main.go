@@ -31,7 +31,7 @@ func main() {
 		WriteTimeout:      setting.ServerSetting.WriteTimeout,
 		IdleTimeout:       setting.ServerSetting.IdleTimeout,
 		ReadHeaderTimeout: setting.ServerSetting.ReadHeaderTimeout,
-		MaxHeaderBytes:    1 << 20,
+		MaxHeaderBytes:    setting.ServerSetting.MaxHeaderBytes,
 	}
 
 	logging.Log.Info().Msg("Server is running...")
