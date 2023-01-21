@@ -26,11 +26,11 @@ var Log = zerolog.New(os.Stdout)
 
 func init() {
 	if os.Getenv("ENV") != "production" {
-		Log = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Caller().Logger()
+		Log = Log.Output(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Caller().Logger()
 	}
 }
-func Middleware() gin.HandlerFunc {
 
+func Middleware() gin.HandlerFunc {
 	var skip map[string]struct{}
 	if length := len(cfg.skipPath); length > 0 {
 		skip = make(map[string]struct{}, length)
@@ -54,9 +54,7 @@ func Middleware() gin.HandlerFunc {
 			track = false
 		}
 
-		if track &&
-			cfg.skipPathRegexp != nil &&
-			cfg.skipPathRegexp.MatchString(path) {
+		if track && cfg.skipPathRegexp != nil && cfg.skipPathRegexp.MatchString(path) {
 			track = false
 		}
 
