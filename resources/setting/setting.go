@@ -1,6 +1,9 @@
 package setting
 
-import "time"
+import (
+	"os"
+	"time"
+)
 
 type App struct {
 	JwtSecret string
@@ -14,12 +17,14 @@ type App struct {
 var AppSetting = &App{}
 
 type Server struct {
-	LogLevel     string
-	HttpHost     string
-	RunMode      string
-	HttpPort     int
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
+	LogLevel          string
+	HttpHost          string
+	RunMode           string
+	HttpPort          int
+	ReadTimeout       time.Duration
+	WriteTimeout      time.Duration
+	IdleTimeout       time.Duration
+	ReadHeaderTimeout time.Duration
 }
 
 var ServerSetting = &Server{}
@@ -33,10 +38,15 @@ func Setup() {
 
 	ServerSetting.ReadTimeout = 60 * time.Second
 	ServerSetting.WriteTimeout = 60 * time.Second
-
-	ServerSetting.RunMode = "debug"
+	ServerSetting.IdleTimeout = 30 * time.Second
+	ServerSetting.ReadHeaderTimeout = 100 * time.Millisecond
+	if os.Getenv("ENV") == "production" {
+		ServerSetting.RunMode = "release"
+	} else {
+		ServerSetting.RunMode = "debug"
+	}
 
 	ServerSetting.HttpHost = "localhost"
 	ServerSetting.HttpPort = 8000
-	ServerSetting.LogLevel = "DEBUG"
+	ServerSetting.LogLevel = "INFO"
 }

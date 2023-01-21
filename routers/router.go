@@ -1,20 +1,27 @@
 package routers
 
 import (
+	"sync"
+
+	_ "github.com/eatrisno/go-gin-good/docs"
 	"github.com/eatrisno/go-gin-good/resources/logging"
 	"github.com/eatrisno/go-gin-good/resources/setting"
 	"github.com/eatrisno/go-gin-good/routers/api"
-
-	_ "github.com/eatrisno/go-gin-good/docs"
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+var routerPool = sync.Pool{
+	New: func() interface{} {
+		return gin.New()
+	},
+}
+
 func InitRouter() *gin.Engine {
 	gin.SetMode(setting.ServerSetting.RunMode)
-	r := gin.New()
-	r.Use(logging.DefaultStructuredLogger())
+	r := routerPool.Get().(*gin.Engine)
+	r.Use(logging.Middleware())
 	r.Use(gin.Recovery())
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))

@@ -1,6 +1,8 @@
 package logging
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -8,11 +10,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func DefaultStructuredLogger() gin.HandlerFunc {
-	return StructuredLogger(&log.Logger)
-}
+var logger = log.Logger
 
-func StructuredLogger(logger *zerolog.Logger) gin.HandlerFunc {
+func init() {
+	if os.Getenv("ENV") != "production" {
+		logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	}
+}
+func Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 
@@ -51,4 +56,24 @@ func StructuredLogger(logger *zerolog.Logger) gin.HandlerFunc {
 			Dur("latency", param.Latency).
 			Msg(param.ErrorMessage)
 	}
+}
+
+func Debug(message ...interface{}) {
+	logger.Debug().Msg(fmt.Sprint(message...))
+}
+
+func Info(message ...interface{}) {
+	logger.Info().Msg(fmt.Sprint(message...))
+}
+
+func Warn(message ...interface{}) {
+	logger.Warn().Msg(fmt.Sprint(message...))
+}
+
+func Fatal(message ...interface{}) {
+	logger.Fatal().Msg(fmt.Sprint(message...))
+}
+
+func Panic(message ...interface{}) {
+	logger.Panic().Msg(fmt.Sprint(message...))
 }

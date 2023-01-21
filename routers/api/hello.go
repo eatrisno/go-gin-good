@@ -20,4 +20,5 @@ func Helloworld(c *gin.Context) {
 	appG.Response(http.StatusOK, e.SUCCESS, gin.H{
 		"message": "helloworld!",
 	})
+
 }
