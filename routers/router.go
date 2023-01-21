@@ -7,6 +7,7 @@ import (
 	"github.com/eatrisno/go-gin-good/resources/logging"
 	"github.com/eatrisno/go-gin-good/resources/setting"
 	"github.com/eatrisno/go-gin-good/routers/api"
+
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"

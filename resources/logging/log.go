@@ -1,79 +1,96 @@
 package logging
 
 import (
-	"fmt"
+	"net/http"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.Logger
+type config struct {
+	utc            bool
+	skipPath       []string
+	skipPathRegexp *regexp.Regexp
+}
+
+var cfg = &config{
+	utc:      false,
+	skipPath: []string{"/ping"},
+}
+
+var Log = zerolog.New(os.Stdout)
 
 func init() {
 	if os.Getenv("ENV") != "production" {
-		logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+		Log = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Caller().Logger()
 	}
 }
 func Middleware() gin.HandlerFunc {
+
+	var skip map[string]struct{}
+	if length := len(cfg.skipPath); length > 0 {
+		skip = make(map[string]struct{}, length)
+		for _, path := range cfg.skipPath {
+			skip[path] = struct{}{}
+		}
+	}
+
 	return func(c *gin.Context) {
 		start := time.Now()
+		path := c.Request.URL.Path
+		raw := c.Request.URL.RawQuery
+		if raw != "" {
+			path = path + "?" + raw
+		}
 
 		c.Next()
+		track := true
 
-		param := gin.LogFormatterParams{
-			TimeStamp:    time.Now(),
-			Latency:      time.Since(start),
-			ClientIP:     c.Request.RemoteAddr,
-			Method:       c.Request.Method,
-			StatusCode:   c.Writer.Status(),
-			ErrorMessage: c.Errors.ByType(gin.ErrorTypePrivate).String(),
-			BodySize:     c.Writer.Size(),
-			Path:         c.Request.URL.String(),
-		}
-		if param.Latency > time.Minute {
-			param.Latency = param.Latency.Truncate(time.Second)
+		if _, ok := skip[path]; ok {
+			track = false
 		}
 
-		level := zerolog.TraceLevel
-		switch {
-		case param.StatusCode >= 200 && param.StatusCode < 300:
-			level = zerolog.InfoLevel
-		case param.StatusCode >= 300 && param.StatusCode < 400:
-			level = zerolog.WarnLevel
-		case param.StatusCode >= 400:
-			level = zerolog.ErrorLevel
+		if track &&
+			cfg.skipPathRegexp != nil &&
+			cfg.skipPathRegexp.MatchString(path) {
+			track = false
 		}
 
-		logger.WithLevel(level).
-			Str("client_id", param.ClientIP).
-			Str("method", param.Method).
-			Int("status_code", param.StatusCode).
-			Int("body_size", param.BodySize).
-			Str("path", param.Path).
-			Dur("latency", param.Latency).
-			Msg(param.ErrorMessage)
+		if track {
+			end := time.Now()
+			if cfg.utc {
+				end = end.UTC()
+			}
+			latency := end.Sub(start)
+
+			if latency > time.Minute {
+				latency = latency.Truncate(time.Second)
+			}
+
+			l := Log.With().
+				Str("client_id", c.ClientIP()).
+				Str("method", c.Request.Method).
+				Int("status_code", c.Writer.Status()).
+				Int("body_size", c.Writer.Size()).
+				Str("path", c.Request.URL.Path).
+				Dur("latency", latency).
+				Logger()
+
+			msg := "Request"
+			if len(c.Errors) > 0 {
+				msg = c.Errors.String()
+			}
+			switch {
+			case c.Writer.Status() >= http.StatusInternalServerError:
+				l.WithLevel(zerolog.ErrorLevel).Msg(msg)
+			case c.Writer.Status() >= http.StatusBadRequest:
+				l.WithLevel(zerolog.WarnLevel).Msg(msg)
+			default:
+				l.WithLevel(zerolog.InfoLevel).Msg(msg)
+			}
+		}
 	}
-}
-
-func Debug(message ...interface{}) {
-	logger.Debug().Msg(fmt.Sprint(message...))
-}
-
-func Info(message ...interface{}) {
-	logger.Info().Msg(fmt.Sprint(message...))
-}
-
-func Warn(message ...interface{}) {
-	logger.Warn().Msg(fmt.Sprint(message...))
-}
-
-func Fatal(message ...interface{}) {
-	logger.Fatal().Msg(fmt.Sprint(message...))
-}
-
-func Panic(message ...interface{}) {
-	logger.Panic().Msg(fmt.Sprint(message...))
 }

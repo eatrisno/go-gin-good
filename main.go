@@ -12,7 +12,7 @@ import (
 
 func init() {
 	setting.Setup()
-	logging.Info("App is starting...")
+	logging.Log.Info().Msg("App is starting...")
 
 }
 func main() {
@@ -36,7 +36,7 @@ func main() {
 		MaxHeaderBytes:    maxHeaderBytes,
 	}
 
-	logging.Info("Server is running...")
+	logging.Log.Info().Msg("Server is running...")
 
 	server.ListenAndServe()
 }
