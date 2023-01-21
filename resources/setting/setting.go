@@ -2,6 +2,7 @@ package setting
 
 import (
 	"os"
+	"regexp"
 	"time"
 )
 
@@ -12,6 +13,9 @@ type App struct {
 	LogSaveName string
 	LogFileExt  string
 	TimeFormat  string
+
+	SkipPath       []string
+	SkipPathRegexp *regexp.Regexp
 }
 
 var AppSetting = &App{}
@@ -36,10 +40,13 @@ func Setup() {
 	AppSetting.LogFileExt = "log"
 	AppSetting.TimeFormat = "20060102"
 
+	AppSetting.SkipPath = []string{"/ping"}
+	AppSetting.SkipPathRegexp = regexp.MustCompile("^/swagger/")
+
 	ServerSetting.ReadTimeout = 60 * time.Second
 	ServerSetting.WriteTimeout = 60 * time.Second
 	ServerSetting.IdleTimeout = 30 * time.Second
-	ServerSetting.ReadHeaderTimeout = 100 * time.Millisecond
+	ServerSetting.ReadHeaderTimeout = 1000 * time.Millisecond
 	if os.Getenv("ENV") == "production" {
 		ServerSetting.RunMode = "release"
 	} else {

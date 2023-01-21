@@ -3,24 +3,12 @@ package logging
 import (
 	"net/http"
 	"os"
-	"regexp"
 	"time"
 
+	"github.com/eatrisno/go-gin-good/resources/setting"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
-
-type config struct {
-	utc            bool
-	skipPath       []string
-	skipPathRegexp *regexp.Regexp
-}
-
-var cfg = &config{
-	utc:            false,
-	skipPath:       []string{"/ping"},
-	skipPathRegexp: regexp.MustCompile("/swagger/*"),
-}
 
 var Log = zerolog.New(os.Stdout)
 
@@ -32,9 +20,9 @@ func init() {
 
 func Middleware() gin.HandlerFunc {
 	var skip map[string]struct{}
-	if length := len(cfg.skipPath); length > 0 {
+	if length := len(setting.AppSetting.SkipPath); length > 0 {
 		skip = make(map[string]struct{}, length)
-		for _, path := range cfg.skipPath {
+		for _, path := range setting.AppSetting.SkipPath {
 			skip[path] = struct{}{}
 		}
 	}
@@ -54,16 +42,12 @@ func Middleware() gin.HandlerFunc {
 			track = false
 		}
 
-		if track && cfg.skipPathRegexp != nil && cfg.skipPathRegexp.MatchString(path) {
+		if track && setting.AppSetting.SkipPathRegexp != nil && setting.AppSetting.SkipPathRegexp.MatchString(path) {
 			track = false
 		}
 
 		if track {
-			end := time.Now()
-			if cfg.utc {
-				end = end.UTC()
-			}
-			latency := end.Sub(start)
+			latency := time.Since(start)
 
 			if latency > time.Minute {
 				latency = latency.Truncate(time.Second)

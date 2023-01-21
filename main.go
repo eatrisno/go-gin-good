@@ -38,5 +38,8 @@ func main() {
 
 	logging.Log.Info().Msg("Server is running...")
 
-	server.ListenAndServe()
+	if err := server.ListenAndServe(); err != nil {
+		panic(err)
+	}
+
 }
