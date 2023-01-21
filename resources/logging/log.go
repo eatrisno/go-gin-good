@@ -17,8 +17,9 @@ type config struct {
 }
 
 var cfg = &config{
-	utc:      false,
-	skipPath: []string{"/ping"},
+	utc:            false,
+	skipPath:       []string{"/ping"},
+	skipPathRegexp: regexp.MustCompile("/swagger/*"),
 }
 
 var Log = zerolog.New(os.Stdout)
