@@ -9,11 +9,6 @@ import (
 type App struct {
 	JwtSecret string
 
-	LogSavePath string
-	LogSaveName string
-	LogFileExt  string
-	TimeFormat  string
-
 	SkipPath       []string
 	SkipPathRegexp *regexp.Regexp
 }
@@ -36,13 +31,9 @@ var ServerSetting = &Server{}
 
 func Setup() {
 	AppSetting.JwtSecret = "secret"
-	AppSetting.LogSavePath = "logs/"
-	AppSetting.LogSaveName = "log"
-	AppSetting.LogFileExt = "log"
-	AppSetting.TimeFormat = "20060102"
 
 	AppSetting.SkipPath = []string{"/ping"}
-	AppSetting.SkipPathRegexp = regexp.MustCompile("^/swagger/")
+	AppSetting.SkipPathRegexp = regexp.MustCompile("^/[swagger].*.$")
 
 	ServerSetting.ReadTimeout = 30 * time.Second
 	ServerSetting.WriteTimeout = 30 * time.Second

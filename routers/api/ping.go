@@ -14,7 +14,6 @@ import (
 // @Failure	500	{object}	app.Response
 // @Router		/ping [get]
 func Ping(c *gin.Context) {
-
 	appG := app.Gin{C: c}
 
 	appG.Response(http.StatusOK, e.SUCCESS, gin.H{
