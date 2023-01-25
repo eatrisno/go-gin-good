@@ -3,59 +3,117 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
-	"github.com/eatrisno/go-gin-good/resources/logging"
-	"github.com/eatrisno/go-gin-good/resources/setting"
+	"github.com/eatrisno/go-gin-good/config"
+	"github.com/eatrisno/go-gin-good/controllers"
+	"github.com/eatrisno/go-gin-good/routes"
+	"github.com/eatrisno/go-gin-good/services"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
+)
 
-	"github.com/eatrisno/go-gin-good/routers"
+var (
+	server      *gin.Engine
+	ctx         context.Context
+	mongoclient *mongo.Client
+	redisclient *redis.Client
+
+	userService         services.UserService
+	UserController      controllers.UserController
+	UserRouteController routes.UserRouteController
+
+	authCollection      *mongo.Collection
+	authService         services.AuthService
+	AuthController      controllers.AuthController
+	AuthRouteController routes.AuthRouteController
 )
 
 func init() {
-	setting.Setup()
-	logging.Log.Info().Msg("App is starting...")
+	config, err := config.LoadConfig(".")
+	if err != nil {
+		log.Fatal("Could not load environment variables", err)
+	}
+
+	ctx = context.TODO()
+
+	// Connect to MongoDB
+	mongoconn := options.Client().ApplyURI(config.DBUri)
+	mongoclient, err := mongo.Connect(ctx, mongoconn)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if err := mongoclient.Ping(ctx, readpref.Primary()); err != nil {
+		panic(err)
+	}
+
+	fmt.Println("MongoDB successfully connected...")
+
+	// Connect to Redis
+	redisclient = redis.NewClient(&redis.Options{
+		Addr: config.RedisUri,
+	})
+
+	if _, err := redisclient.Ping().Result(); err != nil {
+		panic(err)
+	}
+
+	err = redisclient.Set("test", "Welcome to Golang with Redis and MongoDB", 0).Err()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Redis client connected successfully...")
+
+	// Collections
+	authCollection = mongoclient.Database("golang_mongodb").Collection("users")
+	userService = services.NewUserServiceImpl(authCollection, ctx)
+	authService = services.NewAuthService(authCollection, ctx)
+	AuthController = controllers.NewAuthController(authService, userService)
+	AuthRouteController = routes.NewAuthRouteController(AuthController)
+
+	UserController = controllers.NewUserController(userService)
+	UserRouteController = routes.NewRouteUserController(UserController)
+
+	server = gin.Default()
 }
 
 func main() {
-	routersInit := routers.InitRouter()
-	endPoint := fmt.Sprintf("%s:%d", setting.ServerSetting.HttpHost, setting.ServerSetting.HttpPort)
+	config, err := config.LoadConfig(".")
 
-	server := &http.Server{
-		Addr:              endPoint,
-		Handler:           routersInit,
-		ReadTimeout:       setting.ServerSetting.ReadTimeout,
-		WriteTimeout:      setting.ServerSetting.WriteTimeout,
-		IdleTimeout:       setting.ServerSetting.IdleTimeout,
-		ReadHeaderTimeout: setting.ServerSetting.ReadHeaderTimeout,
-		MaxHeaderBytes:    setting.ServerSetting.MaxHeaderBytes,
+	if err != nil {
+		log.Fatal("Could not load config", err)
 	}
 
-	logging.Log.Info().Msg("Server is running...")
+	defer mongoclient.Disconnect(ctx)
 
-	var gracefulStop = make(chan os.Signal)
-	signal.Notify(gracefulStop, syscall.SIGTERM)
-	signal.Notify(gracefulStop, syscall.SIGINT)
+	value, err := redisclient.Get("test").Result()
 
-	go func() {
-		sig := <-gracefulStop
-		logging.Log.Info().Msgf("caught sig: %+v", sig)
-
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := server.Shutdown(ctx); err != nil {
-			logging.Log.Error().Msgf("Server Shutdown Failed:%+v", err)
-		}
-	}()
-
-	if err := server.ListenAndServe(); err != nil {
-		if err == http.ErrServerClosed {
-			logging.Log.Info().Msg("Server closed under request")
-		} else {
-			logging.Log.Error().Msgf("Server closed unexpected %+v", err)
-		}
+	if err == redis.Nil {
+		fmt.Println("key: test does not exist")
+	} else if err != nil {
+		panic(err)
 	}
+
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowOrigins = []string{"http://localhost:8000", "http://localhost:3000"}
+	corsConfig.AllowCredentials = true
+
+	server.Use(cors.New(corsConfig))
+
+	router := server.Group("/api")
+	router.GET("/healthchecker", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": value})
+	})
+
+	AuthRouteController.AuthRoute(router, userService)
+	UserRouteController.UserRoute(router, userService)
+	log.Fatal(server.Run(":" + config.Port))
 }

@@ -1,4 +1,4 @@
-package routers
+package routes
 
 import (
 	"sync"
@@ -6,7 +6,7 @@ import (
 	_ "github.com/eatrisno/go-gin-good/docs"
 	"github.com/eatrisno/go-gin-good/resources/logging"
 	"github.com/eatrisno/go-gin-good/resources/setting"
-	"github.com/eatrisno/go-gin-good/routers/api"
+	"github.com/eatrisno/go-gin-good/routes/api"
 
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"

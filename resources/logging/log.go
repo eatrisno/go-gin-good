@@ -10,11 +10,15 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var Log = zerolog.New(os.Stdout)
+var Log zerolog.Logger
 
 func init() {
-	if os.Getenv("ENV") != "production" {
-		Log = Log.Output(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Caller().Logger()
+	if os.Getenv("ENV") == "production" {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		Log = zerolog.New(os.Stdout)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		Log = zerolog.New(os.Stdout).Output(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Caller().Logger()
 	}
 }
 
